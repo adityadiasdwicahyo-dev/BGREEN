@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Denah Tanaman Digital</title>
+
+<!-- =====================================
+LEAFLET
+===================================== -->
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<style>
+
+html,body{
+
+  margin:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:'Segoe UI';
+  background:#071a12;
+
+}
+
+#map{
+
+  width:100%;
+  height:100vh;
+
+}
+
+/* =====================================
+TOPBAR
+===================================== */
+
+.topbar{
+
+  position:fixed;
+
+  top:15px;
+  left:15px;
+  right:15px;
+
+  z-index:9999;
+
+  background:
+  rgba(7,26,18,.92);
+
+  backdrop-filter:blur(10px);
+
+  border-radius:24px;
+
+  padding:16px 20px;
+
+  color:white;
+
+  box-shadow:
+  0 0 25px rgba(0,0,0,.35);
+
+}
+
+.top-flex{
+
+  display:flex;
+  align-items:center;
+  gap:15px;
+
+}
+
+.logo{
+
+  width:65px;
+  height:65px;
+
+  object-fit:contain;
+
+  background:white;
+
+  padding:6px;
+
+  border-radius:18px;
+
+  box-shadow:
+  0 0 12px rgba(0,0,0,.3);
+
+}
+
+.title{
+
+  font-size:24px;
+  font-weight:bold;
+
+}
+
+.subtitle{
+
+  font-size:13px;
+  opacity:.85;
+
+}
+
+/* =====================================
+MARKER
+===================================== */
+
+.pin{
+
+  width:24px;
+  height:24px;
+
+  border-radius:50%;
+
+  background:#22c55e;
+
+  border:4px solid white;
+
+  box-shadow:
+  0 0 18px rgba(0,0,0,.5);
+
+  animation:pulse 2s infinite;
+
+}
+
+@keyframes pulse{
+
+  0%{
+    transform:scale(1);
+  }
+
+  50%{
+    transform:scale(1.25);
+  }
+
+  100%{
+    transform:scale(1);
+  }
+
+}
+
+/* =====================================
+POPUP
+===================================== */
+
+.leaflet-popup-content-wrapper{
+
+  border-radius:24px;
+  overflow:hidden;
+
+}
+
+.leaflet-popup-content{
+
+  margin:0 !important;
+  width:300px !important;
+
+}
+
+.leaflet-popup-tip{
+
+  background:white;
+
+}
+
+/* =====================================
+SCROLLBAR
+===================================== */
+
+::-webkit-scrollbar{
+
+  width:8px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+  background:#166534;
+  border-radius:20px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- =====================================
+TOPBAR
+===================================== -->
+
+<div class="topbar">
+
+<div class="top-flex">
+
+<!-- LOGO -->
+
+<img
+
+class="logo"
+
+src="https://upload.wikimedia.org/wikipedia/commons/9/95/Lambang_Kabupaten_Probolinggo.png">
+
+<!-- TEXT -->
+
+<div>
+
+<div class="title">
+
+🌿 Denah Tanaman Digital
+
+</div>
+
+<div class="subtitle">
+
+BAKESBANGPOL Kabupaten Probolinggo
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- =====================================
+MAP
+===================================== -->
+
+<div id="map"></div>
+
+<script>
+
+// =====================================
+// PARAMETER QR
+// =====================================
+
+const params =
+new URLSearchParams(window.location.search);
+
+const targetId =
+params.get("id");
+
+// =====================================
+// CUSTOM MAP
+// =====================================
+
+const map = L.map('map',{
+
+  crs:L.CRS.Simple,
+  minZoom:-2,
+  maxZoom:3
+
+});
+
+// =====================================
+// UKURAN DENAH
+// SESUAIKAN DENGAN UKURAN DENAH.PNG
+// =====================================
+
+const width = 2000;
+const height = 1200;
+
+// =====================================
+// BOUNDS
+// =====================================
+
+const bounds = [
+
+  [0,0],
+  [height,width]
+
+];
+
+// =====================================
+// DENAH CUSTOM
+// FILE denah.png HARUS ADA
+// DI REPOSITORY GITHUB
+// =====================================
+
+L.imageOverlay(
+
+  'denah.png',
+
+  bounds
+
+).addTo(map);
+
+map.fitBounds(bounds);
+
+// =====================================
+// URL APPS SCRIPT API
+// =====================================
+
+const API_URL =
+"https://script.google.com/macros/s/AKFYxxxxxxxxxxxxxxxxxxxxxxxx/exec?api=tanaman";
+
+// =====================================
+// ICON MARKER
+// =====================================
+
+const customIcon = L.divIcon({
+
+  className:'',
+
+  html:'<div class="pin"></div>',
+
+  iconSize:[24,24]
+
+});
+
+// =====================================
+// LOAD DATA
+// =====================================
+
+fetch(API_URL)
+
+.then(r=>r.json())
+
+.then(data=>{
+
+  data.forEach(row=>{
+
+    // =================================
+    // VALIDASI KOORDINAT
+    // =================================
+
+    if(!row.x || !row.y) return;
+
+    // =================================
+    // MARKER
+    // =================================
+
+    const marker = L.marker(
+
+      [row.y,row.x],
+
+      {
+        icon:customIcon
+      }
+
+    ).addTo(map);
+
+    // =================================
+    // POPUP PREMIUM
+    // =================================
+
+    marker.bindPopup(`
+
+    <div style="
+      font-family:'Segoe UI';
+      background:white;
+      color:#111;
+      overflow:hidden;
+    ">
+
+      <!-- FOTO -->
+
+      <div style="
+        width:100%;
+        height:210px;
+        overflow:hidden;
+        background:#0b3b28;
+      ">
+
+        <img
+
+        src="${
+          row.foto
+          ? row.foto
+          : 'https://via.placeholder.com/600'
+        }"
+
+        style="
+          width:100%;
+          height:100%;
+          object-fit:contain;
+          background:#0b3b28;
+        ">
+
+      </div>
+
+      <!-- CONTENT -->
+
+      <div style="padding:16px;">
+
+        <!-- NAMA -->
+
+        <div style="
+          font-size:24px;
+          font-weight:bold;
+          color:#166534;
+          margin-bottom:8px;
+        ">
+
+          🌿 ${row.nama}
+
+        </div>
+
+        <!-- STATUS -->
+
+        <div style="
+          background:#16a34a;
+          color:white;
+          display:inline-block;
+          padding:7px 14px;
+          border-radius:20px;
+          font-size:12px;
+          margin-bottom:14px;
+        ">
+
+          ${row.status}
+
+        </div>
+
+        <!-- INFORMASI -->
+
+        <div style="
+          background:#f5f5f5;
+          border-radius:18px;
+          padding:14px;
+          margin-bottom:14px;
+        ">
+
+          <div style="margin-bottom:10px;">
+
+            📌 <b>ID Barcode</b><br>
+
+            ${row.id_barcode}
+
+          </div>
+
+          <div style="margin-bottom:10px;">
+
+            📍 <b>Lokasi</b><br>
+
+            ${row.lokasi}
+
+          </div>
+
+          <div style="margin-bottom:10px;">
+
+            👤 <b>Penanggung Jawab</b><br>
+
+            ${row.penanggung_jawab}
+
+          </div>
+
+          <div>
+
+            📅 <b>Tanggal</b><br>
+
+            ${row.tgl}
+
+          </div>
+
+        </div>
+
+        <!-- KONTRIBUSI -->
+
+        <div style="
+          display:grid;
+          grid-template-columns:1fr 1fr;
+          gap:10px;
+        ">
+
+          <div style="
+            background:#ecfdf5;
+            padding:12px;
+            border-radius:14px;
+            text-align:center;
+          ">
+
+            🌿<br>
+            Oksigen
+
+          </div>
+
+          <div style="
+            background:#ecfdf5;
+            padding:12px;
+            border-radius:14px;
+            text-align:center;
+          ">
+
+            ♻<br>
+            ${
+              Math.floor(Math.random()*15+5)
+            } kg
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    `);
+
+    // =================================
+    // AUTO OPEN DARI QR
+    // =================================
+
+    if(row.id_barcode == targetId){
+
+      setTimeout(()=>{
+
+        map.setView(
+
+          [row.y,row.x],
+
+          1.5
+
+        );
+
+        marker.openPopup();
+
+      },1200);
+
+    }
+
+  });
+
+})
+
+// =====================================
+// ERROR
+// =====================================
+
+.catch(err=>{
+
+  console.log(err);
+
+  alert("Gagal mengambil data Spreadsheet");
+
+});
+
+// =====================================
+// AMBIL KOORDINAT
+// KLIK DENAH
+// =====================================
+
+map.on('click',function(e){
+
+  console.log(
+    "X:",
+    e.latlng.lng
+  );
+
+  console.log(
+    "Y:",
+    e.latlng.lat
+  );
+
+});
+
+</script>
+
+</body>
+
+</html>
